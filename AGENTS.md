@@ -478,6 +478,9 @@ Leave the project in a state where another coding session can immediately unders
 * **Dedicated Link Graph Analysis View** - Full-screen takeover with d3-force layout, controls, legend, details panel, and compact dashboard preview
 * **Global RF Intelligence Map** - Canvas-based world map with simulated regions, receiver/emitter markers, transition arcs, activity indicators, controls, details panel, and disclaimer
 * **Map Type Selector** - Default, Satellite, and Street views for the Global RF Intelligence Map
+* **Firebase Optional Auth** - App works without Firebase config (simulation accessible without login)
+* **Fixed production blank page** - Removed `@remix-run/router` from Vite external config
+* **Fixed ProtectedRoute** - Allows dashboard access when Firebase is not configured
 
 ### Currently Working On
 * No task currently in progress
@@ -575,3 +578,18 @@ The original Link Graph was rendered in a 400×400 Canvas within a `grid-templat
 - [ ] Manual test: Dashboard loads, simulation runs, patterns emerge
 - [ ] Manual test: Global RF Map opens, shows empty state before observations, shows activity after observations, RESET clears activity
 - [ ] Manual test: Global RF Map - switch between Default, Satellite, Street views
+- [ ] Manual test: App loads without Firebase env vars (shows login page with "Continue to Simulation" button)
+
+## VERCEL DEPLOYMENT
+
+The app works **without** Firebase environment variables. When Firebase is not configured:
+- Login page shows "Firebase not configured" notice
+- "CONTINUE TO SIMULATION" button allows direct access to dashboard
+- All simulation features work normally
+- To enable authentication, set these environment variables in Vercel:
+  - `VITE_FIREBASE_API_KEY`
+  - `VITE_FIREBASE_AUTH_DOMAIN`
+  - `VITE_FIREBASE_PROJECT_ID`
+  - `VITE_FIREBASE_STORAGE_BUCKET`
+  - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+  - `VITE_FIREBASE_APP_ID`

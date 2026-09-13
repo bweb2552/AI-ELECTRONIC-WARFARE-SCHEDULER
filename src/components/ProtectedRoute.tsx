@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isFirebaseConfigured } from '../firebase/config';
 
 const style = document.createElement('style');
 style.textContent = `
@@ -39,6 +40,10 @@ export function ProtectedRoute() {
         }}>Verifying authentication...</p>
       </div>
     );
+  }
+
+  if (!isFirebaseConfigured) {
+    return <Outlet />;
   }
 
   if (!user) {

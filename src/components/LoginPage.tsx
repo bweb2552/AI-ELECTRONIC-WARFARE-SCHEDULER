@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { isFirebaseConfigured } from '../firebase/config';
 
 export function LoginPage() {
   const { 
@@ -15,6 +16,7 @@ export function LoginPage() {
     demoEmail,
     demoPassword
   } = useAuth();
+  const navigate = useNavigate();
 
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -46,6 +48,117 @@ export function LoginPage() {
   };
 
   const [formError, setError] = useState<string | null>(error);
+
+  if (!isFirebaseConfigured) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        minHeight: '100vh', 
+        background: 'var(--bg-primary)',
+        fontFamily: 'var(--font-ui)',
+      }}>
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          padding: '40px 20px',
+        }}>
+          <div style={{ 
+            width: '100%', 
+            maxWidth: '420px', 
+            background: 'var(--bg-secondary)', 
+            border: '1px solid var(--border-primary)', 
+            borderRadius: 'var(--radius-lg)', 
+            padding: '40px',
+            boxShadow: 'var(--shadow-glow)',
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              marginBottom: '32px' 
+            }}>
+              <div style={{ 
+                width: 64, 
+                height: 64, 
+                borderRadius: '16px', 
+                background: 'linear-gradient(135deg, var(--accent-cyan), #0099cc)',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginBottom: '16px',
+                boxShadow: '0 0 30px rgba(0, 212, 255, 0.3)'
+              }}>
+                <span style={{ 
+                  fontFamily: 'var(--font-display)', 
+                  fontWeight: 700, 
+                  fontSize: 24, 
+                  color: 'var(--bg-primary)' 
+                }}>EW</span>
+              </div>
+              <h1 style={{ 
+                fontFamily: 'var(--font-display)', 
+                fontSize: 24, 
+                fontWeight: 700, 
+                color: 'var(--accent-cyan)', 
+                letterSpacing: '0.05em',
+                margin: '0 0 8px'
+              }}>SMART-SCAN EW</h1>
+              <p style={{ 
+                fontFamily: 'var(--font-mono)', 
+                fontSize: 11, 
+                color: 'var(--text-muted)', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.1em',
+                margin: 0
+              }}>Adaptive Receiver Scheduler</p>
+            </div>
+
+            <div style={{ 
+              background: 'rgba(255, 184, 0, 0.08)', 
+              border: '1px solid var(--accent-amber)', 
+              borderRadius: 'var(--radius-sm)', 
+              padding: '16px', 
+              marginBottom: '24px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: 'var(--accent-amber)',
+              lineHeight: 1.6
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px' }}>Firebase not configured</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                Authentication is unavailable. The simulation works without login. Configure Firebase environment variables to enable authentication.
+              </div>
+            </div>
+
+            <button 
+              onClick={() => navigate('/')} 
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: 13 }}
+            >
+              CONTINUE TO SIMULATION
+            </button>
+
+            <p style={{ 
+              marginTop: '32px', 
+              fontFamily: 'var(--font-mono)', 
+              fontSize: 10, 
+              color: 'var(--text-muted)', 
+              textAlign: 'center',
+              lineHeight: 1.6
+            }}>
+              Smart Scan Strategy for Electronic Warfare
+              <br/>
+              Simulated RF environment · No real hardware connection
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect authenticated users away from login page
   if (user && !loading) {
