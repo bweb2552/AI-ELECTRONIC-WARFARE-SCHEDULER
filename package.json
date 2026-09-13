@@ -1,0 +1,37 @@
+{
+  "name": "smart-scan-ew",
+  "version": "1.0.0",
+  "description": "Smart Scan Strategy for Electronic Warfare - SIH 2026",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "simulate": "tsx src/simulation/run-scenarios.ts",
+    "eval": "tsx src/evaluation/run-evaluation.ts"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.3",
+    "zustand": "^5.0.0",
+    "seedrandom": "^3.0.5",
+    "simple-statistics": "^7.8.7",
+    "d3": "^7.9.0",
+    "firebase": "^10.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/seedrandom": "^3.0.8",
+    "@types/d3": "^7.4.3",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.9.0"
+  }
+}
