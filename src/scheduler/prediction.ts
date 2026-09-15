@@ -1,8 +1,12 @@
-import type { BandMetrics, SchedulerDecision, FrequencyBand, Observation, TemporalMemoryEntry } from '../core/types';
+import type { BandMetrics, SchedulerDecision, FrequencyBand, Observation, TemporalMemoryEntry, ReceiverState } from '../core/types';
 import { FrequencyActivityMap } from './frequency-map';
 import { TemporalMemory, PeriodicOptimizer } from './temporal-memory';
 import { TransitionGraph } from './link-graph';
 import { PatternFingerprintEngine } from './pattern-fingerprint';
+import { UncertaintyAwareScanner, type ScanValueResult } from './uncertainty-scanner';
+import { ConceptDriftDetector, type SystemDriftState } from './drift-detector';
+import { IntelligenceEvidenceLedger } from './evidence-ledger';
+import { CounterfactualComparison } from './counterfactual';
 
 export interface PredictionResult {
   bandIndex: number;
@@ -40,7 +44,7 @@ export class PredictionLayer {
     const transitionPreds = this.predictTransitions(currentBand, currentTime);
     predictions.push(...transitionPreds);
 
-    const patternPreds = this.predictFromPatterns(currentBand);
+    const patternPreds = this.predictFromPatterns(currentBand, currentTime);
     predictions.push(...patternPreds);
 
     const activityPreds = this.predictFromActivity(currentTime);
@@ -87,7 +91,7 @@ export class PredictionLayer {
     return results;
   }
 
-  private predictFromPatterns(currentBand: number): PredictionResult[] {
+  private predictFromPatterns(currentBand: number, currentTime: number): PredictionResult[] {
     const results: PredictionResult[] = [];
     const patterns = this.patternEngine.getHighConfidencePatterns(0.6);
     
@@ -99,7 +103,7 @@ export class PredictionLayer {
         const nextBand = pattern.transitionPattern[lastIdx + 1];
         results.push({
           bandIndex: nextBand,
-          predictedActivationTime: Date.now() / 1000 + 1,
+          predictedActivationTime: currentTime + 1,
           confidence: pattern.confidence * 0.7,
           source: 'pattern',
           details: `Pattern ${pattern.id} predicts transition to band ${nextBand}`,
@@ -171,6 +175,14 @@ export class SmartScheduler {
   private emitterActivationTimes: Map<string, number> = new Map();
   private emitterFirstDetected: Map<string, number> = new Map();
   private decisionTrace: Array<{ time: number; currentBand: number; selectedBand: number; score: number; confidence: number; reasons: string[]; features: Record<string, number>; exploration: boolean }> = [];
+  
+  // Phase C: Intelligence modules
+  private uncertaintyScanner: UncertaintyAwareScanner;
+  private driftDetector: ConceptDriftDetector;
+  private evidenceLedger: IntelligenceEvidenceLedger;
+  private counterfactualComparison: CounterfactualComparison;
+  private lastScanValueResults: ScanValueResult[] = [];
+  private currentDriftState: SystemDriftState | null = null;
 
   constructor(
     frequencyMap: FrequencyActivityMap,
@@ -187,6 +199,12 @@ export class SmartScheduler {
     );
     this.rng = this.createSeededRandom(seed);
     this.visitCounts = new Array(bands.length).fill(0);
+    
+    // Phase C: Initialize intelligence modules
+    this.uncertaintyScanner = new UncertaintyAwareScanner(bands);
+    this.driftDetector = new ConceptDriftDetector(bands);
+    this.evidenceLedger = new IntelligenceEvidenceLedger(500);
+    this.counterfactualComparison = new CounterfactualComparison(bands);
   }
 
   private createSeededRandom(seed: number): () => number {
@@ -197,7 +215,7 @@ export class SmartScheduler {
     };
   }
 
-  decide(receiverState: any): SchedulerDecision {
+  decide(receiverState: ReceiverState): SchedulerDecision {
     const currentTime = receiverState.lastObservationTime || 0;
     const currentBand = receiverState.currentBand || 0;
     const dwellTime = 0.01;
@@ -365,8 +383,42 @@ export class SmartScheduler {
     return this.predictionLayer;
   }
 
+  // Phase C: Getters for intelligence modules
+  getUncertaintyScanner(): UncertaintyAwareScanner {
+    return this.uncertaintyScanner;
+  }
+
+  getDriftDetector(): ConceptDriftDetector {
+    return this.driftDetector;
+  }
+
+  getEvidenceLedger(): IntelligenceEvidenceLedger {
+    return this.evidenceLedger;
+  }
+
+  getCounterfactualComparison(): CounterfactualComparison {
+    return this.counterfactualComparison;
+  }
+
+  getLastScanValueResults(): ScanValueResult[] {
+    return this.lastScanValueResults;
+  }
+
+  getCurrentDriftState(): SystemDriftState | null {
+    return this.currentDriftState;
+  }
+
   reset(): void {
     this.visitCounts.fill(0);
     this.totalVisits = 0;
+    this.predictionHistory = [];
+    this.emitterActivationTimes.clear();
+    this.emitterFirstDetected.clear();
+    this.decisionTrace = [];
+    this.uncertaintyScanner.reset();
+    this.driftDetector.reset();
+    this.evidenceLedger.reset();
+    this.lastScanValueResults = [];
+    this.currentDriftState = null;
   }
 }

@@ -1,4 +1,6 @@
 import type { EvaluationMetrics, ScenarioResult, TimelineEvent, SchedulerDecision, GroundTruthEntry, Observation } from '../core/types';
+import { FrequencyActivityMap } from '../scheduler/frequency-map';
+import { TemporalMemory } from '../scheduler/temporal-memory';
 
 export class MetricsCalculator {
   private truePositives = 0;
@@ -15,9 +17,17 @@ export class MetricsCalculator {
   private scanTimes: number[] = [];
   private emitterFirstActive: Map<string, number> = new Map();
   private emitterFirstDetected: Map<string, number> = new Map();
+  private scannedBands: Set<number> = new Set();
+  private scanHistory: Array<{ time: number; bandIndex: number; hit: boolean }> = [];
 
   recordDetection(observation: Observation, groundTruth: GroundTruthEntry | undefined): void {
     this.totalScans++;
+    this.scannedBands.add(observation.bandIndex);
+    this.scanHistory.push({
+      time: observation.time,
+      bandIndex: observation.bandIndex,
+      hit: observation.detected,
+    });
     
     const detected = observation.detected;
     const actuallyActive = groundTruth?.active ?? false;
@@ -72,9 +82,15 @@ export class MetricsCalculator {
   }
 
   getMetrics(): EvaluationMetrics {
-    const pd = this.truePositives / (this.truePositives + this.falseNegatives) || 0;
-    const far = this.falsePositives / (this.falsePositives + this.trueNegatives) || 0;
-    const interceptRate = this.intercepts / this.totalOpportunities || 0;
+    const pd = (this.truePositives + this.falseNegatives) > 0
+      ? this.truePositives / (this.truePositives + this.falseNegatives)
+      : 0;
+    const far = (this.falsePositives + this.trueNegatives) > 0
+      ? this.falsePositives / (this.falsePositives + this.trueNegatives)
+      : 0;
+    const interceptRate = this.totalOpportunities > 0
+      ? this.intercepts / this.totalOpportunities
+      : 0;
     const avgInterceptTime = this.interceptTimes.length > 0
       ? this.interceptTimes.reduce((a, b) => a + b, 0) / this.interceptTimes.length
       : 0;
@@ -85,6 +101,23 @@ export class MetricsCalculator {
       ? this.predictions.filter(p => p.correct).length / this.predictions.length
       : 0;
     const scanEfficiency = this.totalScans > 0 ? this.productiveScans / this.totalScans : 0;
+
+    // New metrics
+    const uniqueBandsExplored = this.scannedBands.size;
+    const receiverUtilisation = this.totalScans > 0
+      ? this.scanTimes.filter(t => t > 0).length / this.totalScans
+      : 0;
+
+    // Learning curve: detection rate in first half vs second half
+    const midpoint = Math.floor(this.scanHistory.length / 2);
+    const firstHalf = this.scanHistory.slice(0, midpoint);
+    const secondHalf = this.scanHistory.slice(midpoint);
+    const firstHalfPd = firstHalf.length > 0
+      ? firstHalf.filter(s => s.hit).length / firstHalf.length
+      : 0;
+    const secondHalfPd = secondHalf.length > 0
+      ? secondHalf.filter(s => s.hit).length / secondHalf.length
+      : 0;
 
     return {
       probabilityOfDetection: pd,
@@ -98,6 +131,9 @@ export class MetricsCalculator {
       totalHits: this.truePositives,
       totalMisses: this.falseNegatives,
       totalFalseAlarms: this.falsePositives,
+      uniqueBandsExplored,
+      receiverUtilisation,
+      learningCurve: { firstHalfPd, secondHalfPd, improvement: secondHalfPd - firstHalfPd },
     };
   }
 
@@ -116,6 +152,8 @@ export class MetricsCalculator {
     this.scanTimes = [];
     this.emitterFirstActive.clear();
     this.emitterFirstDetected.clear();
+    this.scannedBands.clear();
+    this.scanHistory = [];
   }
 }
 
@@ -132,27 +170,16 @@ export class ScenarioRunner {
     this.metrics = new MetricsCalculator();
   }
 
-  run(scenarioName: string, schedulerName: string, maxSteps: number = 5000): ScenarioResult {
+  run(scenarioName: string, schedulerName: string, maxSteps: number = 5000, duration: number = 60): ScenarioResult {
     this.metrics.reset();
     this.timeline = [];
     this.decisions = [];
 
     const bands = this.simulator.getBands();
-    const bandMetrics: any[] = bands.map((_band: any, i: number) => ({
-      bandIndex: i,
-      activityScore: 0,
-      recentHitCount: 0,
-      recentMissCount: 0,
-      timeSinceLastHit: Infinity,
-      hitRate: 0,
-      signalStrengthEstimate: -120,
-      periodicityScore: 0,
-      predictionConfidence: 0,
-      transitionProbability: 0,
-      threatPriority: 0,
-      explorationScore: 1,
-      priority: 0,
-    }));
+    
+    // Use real FrequencyActivityMap instead of simplified bandMetrics
+    const frequencyMap = new FrequencyActivityMap(bands);
+    const temporalMemory = new TemporalMemory(bands);
 
     // Access the internal RF environment simulator for ground truth
     const rfSim = (this.simulator as any).simulator;
@@ -161,8 +188,10 @@ export class ScenarioRunner {
     let step = 0;
     const dt = 0.011;
 
-    while (step < maxSteps && this.simulator.getCurrentTime() < 60) {
+    while (step < maxSteps && this.simulator.getCurrentTime() < duration) {
       const receiverState = this.simulator.getReceiverState();
+      // Use real metrics from FrequencyActivityMap
+      const bandMetrics = frequencyMap.getAllMetrics();
       const decision = this.scheduler.decide(bandMetrics, receiverState, bands);
       this.decisions.push(decision);
 
@@ -189,20 +218,15 @@ export class ScenarioRunner {
           
           this.metrics.recordDetection(observation, gtEntry);
           
-          // Update band metrics for priority scheduler
-          const bm = bandMetrics[observation.bandIndex];
-          if (bm) {
-            if (actuallyActive) {
-              bm.recentHitCount = Math.min(50, bm.recentHitCount + 1);
-              bm.timeSinceLastHit = 0;
-            } else {
-              bm.recentMissCount = Math.min(50, bm.recentMissCount + 1);
-              bm.timeSinceLastHit += 1;
-            }
-            const total = bm.recentHitCount + bm.recentMissCount;
-            bm.hitRate = total > 0 ? bm.recentHitCount / total : 0;
-            bm.activityScore = bm.hitRate * 0.5 + Math.exp(-bm.timeSinceLastHit / 10) * 0.5;
+          // Record prediction accuracy: did the scheduler predict the right band?
+          if (actuallyActive) {
+            this.metrics.recordPrediction(decision.nextBand, observation.bandIndex);
           }
+          
+          // Update temporal memory and frequency map with observation
+          temporalMemory.record(observation, actuallyActive);
+          const temporalEntry = temporalMemory.getEntry(observation.bandIndex);
+          frequencyMap.update(observation, actuallyActive, temporalEntry);
           
           this.timeline.push({
             time: this.simulator.getCurrentTime(),
@@ -213,15 +237,14 @@ export class ScenarioRunner {
             metadata: { hit: result.hit, snr: observation.snr },
           });
           
-          if (result.hit) {
-            this.scheduler.update(observation, true, bm, null);
-          }
+          this.scheduler.update(observation, result.hit);
           break;
         }
       }
 
       if (!observation) {
         this.simulator.step(dt);
+        frequencyMap.incrementTimeSinceLastHit();
       }
 
       this.timeline.push({
@@ -266,12 +289,28 @@ export function compareSchedulers(
 export function printComparison(comparison: Map<string, Map<string, EvaluationMetrics>>): void {
   console.log('\n=== COMPARATIVE EVALUATION RESULTS ===\n');
   
+  const schedulerNames = new Set<string>();
+  const scenarioResults: Array<{ scenario: string; name: string; metrics: EvaluationMetrics }> = [];
+
   for (const [scenario, schedulers] of comparison) {
     console.log(`\n--- ${scenario} ---`);
-    console.log('Scheduler'.padEnd(20) + 'Pd'.padEnd(8) + 'FAR'.padEnd(8) + 'Intercept'.padEnd(10) + 'AvgTime'.padEnd(10) + 'PredAcc'.padEnd(8) + 'Efficiency');
-    console.log('-'.repeat(82));
+    const header = [
+      'Scheduler'.padEnd(20),
+      'Pd'.padEnd(8),
+      'FAR'.padEnd(8),
+      'Intercept'.padEnd(10),
+      'AvgTime'.padEnd(10),
+      'PredAcc'.padEnd(8),
+      'Efficiency'.padEnd(10),
+      'UniqueBands'.padEnd(12),
+      'Learning',
+    ].join('');
+    console.log(header);
+    console.log('-'.repeat(100));
     
     for (const [name, metrics] of schedulers) {
+      schedulerNames.add(name);
+      const learningStr = `+${(metrics.learningCurve.improvement * 100).toFixed(0)}%`;
       console.log(
         name.padEnd(20) +
         metrics.probabilityOfDetection.toFixed(3).padEnd(8) +
@@ -279,9 +318,46 @@ export function printComparison(comparison: Map<string, Map<string, EvaluationMe
         metrics.interceptRate.toFixed(3).padEnd(10) +
         metrics.averageInterceptTime.toFixed(3).padEnd(10) +
         metrics.predictionAccuracy.toFixed(3).padEnd(8) +
-        metrics.scanEfficiency.toFixed(3)
+        metrics.scanEfficiency.toFixed(3).padEnd(10) +
+        metrics.uniqueBandsExplored.toString().padEnd(12) +
+        learningStr
       );
+      scenarioResults.push({ scenario, name, metrics });
     }
+  }
+
+  // Aggregate summary across all scenarios
+  console.log('\n=== AGGREGATE SUMMARY (Mean Across All Scenarios) ===\n');
+  const aggregateHeader = [
+    'Scheduler'.padEnd(20),
+    'Pd'.padEnd(8),
+    'FAR'.padEnd(8),
+    'Intercept'.padEnd(10),
+    'Efficiency'.padEnd(10),
+    'PredAcc'.padEnd(8),
+    'UniqueBands'.padEnd(12),
+    'Scenarios',
+  ].join('');
+  console.log(aggregateHeader);
+  console.log('-'.repeat(90));
+
+  for (const name of schedulerNames) {
+    const results = scenarioResults.filter(r => r.name === name);
+    if (results.length === 0) continue;
+    const n = results.length;
+    const avg = (fn: (m: EvaluationMetrics) => number) =>
+      results.reduce((sum, r) => sum + fn(r.metrics), 0) / n;
+    
+    console.log(
+      name.padEnd(20) +
+      avg(m => m.probabilityOfDetection).toFixed(3).padEnd(8) +
+      avg(m => m.falseAlarmRate).toFixed(3).padEnd(8) +
+      avg(m => m.interceptRate).toFixed(3).padEnd(10) +
+      avg(m => m.scanEfficiency).toFixed(3).padEnd(10) +
+      avg(m => m.predictionAccuracy).toFixed(3).padEnd(8) +
+      avg(m => m.uniqueBandsExplored).toFixed(0).padEnd(12) +
+      n.toString()
+    );
   }
   
   console.log('\n');

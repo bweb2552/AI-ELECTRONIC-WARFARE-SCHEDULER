@@ -96,6 +96,19 @@ export class VirtualReceiver {
     this.scanHistory = [];
   }
 
+  resetState(): void {
+    this.state = {
+      currentBand: 0,
+      currentFrequency: this.bands[0]?.centerFrequency || this.config.totalFrequencyRange[0],
+      isScanning: false,
+      dwellTimeRemaining: 0,
+      tuningTimeRemaining: 0,
+      targetBand: null,
+      lastObservationTime: 0,
+    };
+    this.scanHistory = [];
+  }
+
   isReadyForNextScan(): boolean {
     return !this.state.isScanning && this.state.tuningTimeRemaining === 0;
   }
@@ -190,6 +203,6 @@ export class ReceiverSimulator {
 
   reset(): void {
     this.simulator.reset();
-    this.receiver.clearHistory();
+    this.receiver.resetState();
   }
 }

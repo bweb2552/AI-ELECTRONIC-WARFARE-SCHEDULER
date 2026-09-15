@@ -206,6 +206,13 @@ export interface EvaluationMetrics {
   totalHits: number;
   totalMisses: number;
   totalFalseAlarms: number;
+  uniqueBandsExplored: number;
+  receiverUtilisation: number;
+  learningCurve: {
+    firstHalfPd: number;
+    secondHalfPd: number;
+    improvement: number;
+  };
 }
 
 export interface ScenarioResult {

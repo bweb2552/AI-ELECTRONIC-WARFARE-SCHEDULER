@@ -10,6 +10,7 @@ import { SmartScheduler } from './scheduler/prediction';
 import { createScenarios } from './evaluation/scenarios';
 import { LoginPage } from './components/LoginPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { useAudio } from './hooks/useAudio';
 import { FullLinkGraphView } from './ui/FullLinkGraphView';
@@ -493,6 +494,7 @@ function Dashboard() {
         </div>
       </header>
 
+      <ErrorBoundary panelName="Dashboard Main">
       <main style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '16px', gap: '16px' }}>
         <div style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'auto' }}>
           <div className="glass-panel" style={{ padding: '16px' }}>
@@ -926,6 +928,7 @@ function Dashboard() {
           </div>
         </div>
       </main>
+      </ErrorBoundary>
     </div>
   );
 }

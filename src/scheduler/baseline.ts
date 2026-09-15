@@ -66,6 +66,19 @@ export class PriorityScheduler implements Scheduler {
   name = 'Priority';
   private visitCounts: number[] = [];
   private totalVisits = 0;
+  private rng: () => number;
+
+  constructor(seed: number = 42) {
+    this.rng = this.createSeededRandom(seed);
+  }
+
+  private createSeededRandom(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s = (s * 1664525 + 1013904223) % 4294967296;
+      return s / 4294967296;
+    };
+  }
 
   decide(bandMetrics: BandMetrics[], _receiverState: ReceiverState, bands: FrequencyBand[]): SchedulerDecision {
     while (this.visitCounts.length < bands.length) {
@@ -75,12 +88,13 @@ export class PriorityScheduler implements Scheduler {
     let bestBand = 0;
     let bestScore = -1;
     let bestConfidence = 0;
+    const candidates: number[] = [];
 
     for (let i = 0; i < bands.length; i++) {
       const metrics = bandMetrics[i];
       if (!metrics) continue;
       
-      const explorationBonus = Math.sqrt(Math.log(this.totalVisits + 1) / (this.visitCounts[i] + 1)) * 0.3;
+      const explorationBonus = Math.sqrt(Math.log(this.totalVisits + 2) / (this.visitCounts[i] + 1)) * 0.3;
       const score = metrics.activityScore * 0.5 + metrics.hitRate * 0.3 + (metrics.signalStrengthEstimate + 120) / 60 * 0.2 + explorationBonus;
       const confidence = Math.min(1, metrics.hitRate + 0.2);
       
@@ -88,7 +102,16 @@ export class PriorityScheduler implements Scheduler {
         bestScore = score;
         bestBand = i;
         bestConfidence = confidence;
+        candidates.length = 0;
+        candidates.push(i);
+      } else if (score === bestScore) {
+        candidates.push(i);
       }
+    }
+
+    // Random tiebreaking when all bands have same score
+    if (candidates.length > 1) {
+      bestBand = candidates[Math.floor(this.rng() * candidates.length)];
     }
 
     return {
@@ -101,7 +124,12 @@ export class PriorityScheduler implements Scheduler {
     };
   }
 
-  update(): void {}
+  update(observation: Observation): void {
+    this.totalVisits++;
+    if (observation.bandIndex >= 0 && observation.bandIndex < this.visitCounts.length) {
+      this.visitCounts[observation.bandIndex]++;
+    }
+  }
   reset(): void {
     this.visitCounts = [];
     this.totalVisits = 0;
@@ -119,6 +147,7 @@ export class AdaptiveScheduler implements Scheduler {
   private visitCounts: number[] = [];
   private totalVisits = 0;
   private lastBand = -1;
+  private lastBandMetrics: BandMetrics[] = [];
 
   constructor(_seed: number = 42) {
     this.initializeMatrices();
@@ -158,7 +187,8 @@ export class AdaptiveScheduler implements Scheduler {
     if (from < 0) return;
     const key = `${from}->${to}`;
     const current = this.transitionGraph.get(key) || 0;
-    this.transitionGraph.set(key, current * 0.9 + 0.1);
+    // Use additive increase with cap, not exponential smoothing (which converges to 1.0)
+    this.transitionGraph.set(key, Math.min(1.0, current + 0.15));
   }
 
   private invertMatrix(matrix: number[][]): number[][] {
@@ -194,6 +224,9 @@ export class AdaptiveScheduler implements Scheduler {
     while (this.visitCounts.length < bands.length) {
       this.visitCounts.push(0);
     }
+
+    // Store real metrics for use in update()
+    this.lastBandMetrics = bandMetrics;
 
     let bestBand = 0;
     let bestUCB = -Infinity;
@@ -248,7 +281,8 @@ export class AdaptiveScheduler implements Scheduler {
 
   update(observation: Observation, hit: boolean): void {
     const band = observation.bandIndex;
-    const metrics = this.getBandMetrics(band);
+    // Use real metrics from last decide() call, not hardcoded dummy values
+    const metrics = this.lastBandMetrics[band] || this.getBandMetrics(band);
     const features = this.extractFeatures(metrics, band, { 
       currentBand: band, 
       currentFrequency: observation.frequency, 
@@ -306,7 +340,7 @@ export function createScheduler(type: 'sequential' | 'random' | 'priority' | 'ad
   switch (type) {
     case 'sequential': return new SequentialScheduler();
     case 'random': return new RandomScheduler(seed);
-    case 'priority': return new PriorityScheduler();
+    case 'priority': return new PriorityScheduler(seed);
     case 'adaptive': return new AdaptiveScheduler(seed);
     default: return new SequentialScheduler();
   }

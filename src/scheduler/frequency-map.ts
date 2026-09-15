@@ -42,13 +42,13 @@ export class FrequencyActivityMap {
     if (history.length > this.historyWindow) history.shift();
 
     if (hit) {
-      metrics.recentHitCount = Math.min(this.historyWindow, metrics.recentHitCount + 1);
+      metrics.recentHitCount = Math.min(this.historyWindow, metrics.recentHitCount * 0.9 + 1);
       metrics.timeSinceLastHit = 0;
       metrics.signalStrengthEstimate = observation.power 
         ? (metrics.signalStrengthEstimate * 0.7 + observation.power * 0.3)
         : metrics.signalStrengthEstimate;
     } else {
-      metrics.recentMissCount = Math.min(this.historyWindow, metrics.recentMissCount + 1);
+      metrics.recentMissCount = Math.min(this.historyWindow, metrics.recentMissCount * 0.9 + 1);
       metrics.timeSinceLastHit += 1;
     }
 
@@ -59,6 +59,13 @@ export class FrequencyActivityMap {
     metrics.predictionConfidence = this.computeConfidence(metrics, history);
     metrics.explorationScore = this.computeExplorationScore(metrics);
     metrics.threatPriority = this.computeThreatPriority(metrics, observation);
+    
+    // Compute transition probability from observation pattern:
+    // High miss rate with some hits = band transitions (emitter present but not always)
+    const totalObs = metrics.recentHitCount + metrics.recentMissCount;
+    metrics.transitionProbability = totalObs > 3 
+      ? metrics.recentMissCount / totalObs * (metrics.recentHitCount > 0 ? 1 : 0.3)
+      : 0;
 
     if (temporalMemory) {
       metrics.periodicityScore = temporalMemory.periodicityScore;

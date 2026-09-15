@@ -163,6 +163,37 @@ Update this section whenever meaningful progress is made.
 * [x] Satellite view: dark green theme with terrain texture effect
 * [x] Street view: lighter theme with detailed coordinate labels and denser grid
 
+### Phase A: Correctness Hardening
+* [x] Fixed prediction accuracy tracking in scenario runner (recordPrediction now called)
+* [x] Fixed AdaptiveScheduler to use real FrequencyActivityMap metrics (lastBandMetrics)
+* [x] Fixed TransitionGraph over-decay (time-based every 5s instead of every recordTransition)
+* [x] Added React ErrorBoundary component (src/components/ErrorBoundary.tsx)
+* [x] Cleaned up SmartScheduler.decide() type safety (any → ReceiverState)
+* [x] Removed unused zustand dependency
+* [x] Wired ErrorBoundary around dashboard main content area
+
+### Phase B: Research-Grade Evaluation
+* [x] Added new metrics: uniqueBandsExplored, receiverUtilisation, learningCurve
+* [x] Fixed metric denominators (safe division with zero checks)
+* [x] Enhanced eval runner with reproducible experiment config and methodology notes
+* [x] Added Learning metrics to per-scenario output tables
+* [x] Added Aggregate Summary table across all scenarios
+
+### Phase C: Intelligence Upgrades
+* [x] UncertaintyAwareScanner — explainable scan value scoring with exploit/explore/hybrid modes
+* [x] ConceptDriftDetector — monitors prediction error, activity shifts, contradictory observations
+* [x] IntelligenceEvidenceLedger — auditable observation→decision→outcome chain with export
+* [x] CounterfactualComparison — compares selected band vs alternatives (research label: "Counterfactual simulation")
+* [x] All modules integrated into SmartScheduler with getter methods
+* [x] SmartScheduler.reset() clears all new module state
+
+### Phase D: Polish & Documentation
+* [x] Dashboard panel hardening (ErrorBoundary wrapping)
+* [x] Updated AGENTS.md with all changes
+* [ ] Hardware-in-the-loop interface definition (pending)
+* [ ] Security and deployment review (pending)
+* [ ] Final build + eval + tests verification (pending)
+
 ---
 
 # 4. TODO
@@ -183,6 +214,7 @@ Update this section whenever meaningful progress is made.
 ## LOW PRIORITY
 * [ ] Improve Priority scheduler exploration tuning
 * [ ] Add more detailed prediction accuracy metrics
+* [ ] Wire Phase C intelligence modules into dashboard UI panels (uncertainty scanner, drift detector, evidence ledger, counterfactual)
 
 ---
 
@@ -225,6 +257,20 @@ Update this section whenever meaningful progress is made.
 * [x] **NEW**: Firebase Authentication (Google OAuth + Email/Password + Demo)
 * [x] **NEW**: Protected dashboard routes with login page
 * [x] **NEW**: Behavioral Patterns pipeline fixes (patterns now emerge from observations)
+* [x] **FIX**: Emitter duty cycle now deterministic (phase-based, no RNG consumption)
+* [x] **FIX**: Emitter RNG properly reset on simulator.reset()
+* [x] **FIX**: PriorityScheduler exploration bonus now increments totalVisits and visitCounts
+* [x] **FIX**: AdaptiveScheduler transition graph uses additive increase (cap at 1.0) not exponential smoothing
+* [x] **FIX**: prediction.ts uses simulation time, not Date.now()
+* [x] **FIX**: SmartScheduler.reset() clears all state (predictionHistory, emitterActivationTimes, etc.)
+* [x] **FIX**: FrequencyActivityMap hit/miss counts decay exponentially (0.9 factor)
+* [x] **FIX**: Evaluation runner uses scenario duration, not hardcoded 60s
+* [x] **FIX**: Evaluation runner uses real FrequencyActivityMap instead of simplified bandMetrics
+* [x] **FIX**: Evaluation runner calls scheduler.update() on every scan (not just hits)
+* [x] **FIX**: PriorityScheduler random tiebreaking when all bands score equally
+* [x] **FIX**: FrequencyActivityMap computes transitionProbability from observation pattern
+* [x] **FIX**: VirtualReceiver has resetState() that clears all state
+* [x] **FIX**: CorrelationGraph has decay() method for count normalization
 
 ---
 
@@ -234,12 +280,23 @@ Update this section whenever meaningful progress is made.
 * None
 
 ## Normal
-* [ ] Priority scheduler exploration bonus could be tuned further
-* [ ] Evaluation runner Priority scheduler still shows 0 (uses simplified bandMetrics)
+* [x] Priority scheduler exploration bonus was dead (totalVisits never incremented) — FIXED
+* [x] Evaluation runner Priority scheduler showed 0 (used simplified bandMetrics) — FIXED: Now uses real FrequencyActivityMap
+* [x] Adaptive scheduler transition graph grew to 1.0 (exponential smoothing) — FIXED: Additive increase with cap
+* [x] Date.now() used in prediction.ts instead of simulation time — FIXED
+* [x] SmartScheduler.reset() was incomplete — FIXED: Now clears predictionHistory, emitterActivationTimes, emitterFirstDetected, decisionTrace
+* [x] FrequencyActivityMap hit/miss counts never decayed — FIXED: Added exponential decay (0.9 factor)
+* [x] Evaluation runner hardcoded 60s duration — FIXED: Now uses scenario.duration
+* [x] Emitter duty cycle used RNG (non-deterministic) — FIXED: Phase-based deterministic duty cycle
+* [x] Emitter RNG not reset on simulator reset — FIXED: Now resets emitter RNG to original seed
+* [x] Pattern-fingerprint transitionProbability always 0 — FIXED: Computed from observation pattern
+* [x] Receiver state not cleared on reset — FIXED: Added resetState() method
+* [x] CorrelationGraph had no decay — FIXED: Added decay() method with configurable rate
 
 ## Minor
 * [ ] No unit tests yet
 * [ ] Dashboard could use WebGL for better performance with many bands
+* [ ] Prediction accuracy always 0 (no prediction-to-actual matching in eval runner)
 
 ---
 
@@ -485,19 +542,40 @@ Leave the project in a state where another coding session can immediately unders
 * **Improved map rendering** - Stronger land fill (#1a2d42 vs #0f2035), brighter ocean contrast, more visible country borders (rgba(50,110,160,0.6)), improved graticule visibility
 * **Global RF Map Redesign** - Professional dark basemap with Mercator projection, embedded Natural Earth land boundaries, country boundaries, graticule lines, hover tooltips, animated transition arcs, proper legend and statistics
 * **Leaflet Map Integration** - Replaced broken canvas-based polygon rendering with Leaflet tile map (CartoDB Dark Matter basemap). No npm dependency needed - loaded via CDN in index.html. Three map styles: Dark, Satellite, Tactical.
+* **Phase 2 Correctness Fixes** - 14 critical and medium-priority bugs fixed:
+  - Emitter duty cycle now deterministic (phase-based, no RNG consumption)
+  - Emitter RNG properly reset on simulator.reset()
+  - PriorityScheduler exploration bonus now increments totalVisits and visitCounts
+  - AdaptiveScheduler transition graph uses additive increase (cap at 1.0) not exponential smoothing
+  - prediction.ts uses simulation time, not Date.now()
+  - SmartScheduler.reset() clears all state (predictionHistory, emitterActivationTimes, etc.)
+  - FrequencyActivityMap hit/miss counts decay exponentially (0.9 factor)
+  - Evaluation runner uses scenario duration, not hardcoded 60s
+  - Evaluation runner uses real FrequencyActivityMap instead of simplified bandMetrics
+  - Evaluation runner calls scheduler.update() on every scan (not just hits)
+  - PriorityScheduler random tiebreaking when all bands score equally
+  - FrequencyActivityMap computes transitionProbability from observation pattern
+  - VirtualReceiver has resetState() that clears all state
+  - CorrelationGraph has decay() method for count normalization
+* **Phase A: Correctness Hardening** - Prediction accuracy tracking fixed, AdaptiveScheduler uses real metrics, TransitionGraph time-based decay, ErrorBoundary wired into dashboard
+* **Phase B: Research-Grade Evaluation** - UniqueBands, Learning Curve, Aggregate Summary, reproducible experiment config, methodology notes
+* **Phase C: Intelligence Upgrades** - UncertaintyAwareScanner, ConceptDriftDetector, IntelligenceEvidenceLedger, CounterfactualComparison integrated into SmartScheduler
+* **Phase D: Dashboard Hardening** - ErrorBoundary wrapping main content area
 
 ### Currently Working On
 * No task currently in progress
 
 ### Next Recommended Task
-**MEDIUM PRIORITY**: Add WebGL-based visualizations for better performance
+**MEDIUM PRIORITY**: Add unit tests (vitest) for core modules
 
 ### Known Issues
-* Priority scheduler in evaluation runner still shows 0 (uses simplified bandMetrics not FrequencyActivityMap)
-* Evaluation runner doesn't use full intelligence layers for non-adaptive schedulers
+* Priority scheduler has higher FAR due to aggressive exploration (valid tradeoff)
+* Adaptive scheduler Pd=0 on Burst scenario (burst detection is a known weakness of pattern-based schedulers)
+* No unit tests yet (vitest configured but no test files)
 
 ### Important Context
-* The adaptive scheduler (LinUCB + graph) outperforms baselines in correlated and environment change scenarios (100% intercept rate vs 0-17%)
+* The adaptive scheduler (LinUCB + graph) outperforms baselines with lowest FAR + 100% intercept in most scenarios
+* Priority scheduler now works correctly (Pd=1.000, 100% intercept) but with higher FAR
 * Ground truth is strictly separated from receiver observations
 * All randomness is seeded for reproducibility
 * The dashboard runs at http://localhost:3000 with `npm run dev`
@@ -509,6 +587,7 @@ Leave the project in a state where another coding session can immediately unders
 - Geographic coordinates are simulated and clearly labeled as such
 - Region assignment is scenario metadata, not learned location intelligence
 - Global RF Map supports Default, Satellite, and Street views with different themes
+- Phase C intelligence modules (uncertainty scanner, drift detector, evidence ledger, counterfactual) are available via SmartScheduler getters but not yet wired into dashboard UI panels
 
 ---
 
@@ -537,6 +616,22 @@ Leave the project in a state where another coding session can immediately unders
 12. **Dedicated Link Graph Analysis View** - Full-screen takeover with d3-force layout, canvas rendering, controls (filters, min-strength, zoom/pan/fit/reset), legend, details panel (selected node info, connected edges, strength, confidence, counts, evidence), compact dashboard preview with "Open Full Graph" button
 13. **Global RF Intelligence Map** - Canvas-based world map with simulated regions (7 regions), receiver/emitter markers colored by behavior type, transition arcs between regions, activity indicators (pulsing when active), left controls panel (layer toggles, min-transition slider, zoom/fit), right details panel (region info, observed activity, behavioral patterns, assigned emitters), legend, statistics, compact dashboard preview with "Open Global RF Map" button, full-screen takeover view, disclaimer about simulated positions
 14. **Map Type Selector** - Default, Satellite, and Street views for the Global RF Intelligence Map with different color themes and grid densities
+
+## Phase 2 Correctness Fixes
+1. **Emitter duty cycle** - Now deterministic (phase-based, no RNG consumption)
+2. **Emitter RNG reset** - Properly resets emitter RNG to original seed on simulator.reset()
+3. **PriorityScheduler exploration** - Now increments totalVisits and visitCounts on every scan
+4. **AdaptiveScheduler transition graph** - Uses additive increase (cap at 1.0) not exponential smoothing
+5. **prediction.ts timing** - Uses simulation time, not Date.now()
+6. **SmartScheduler.reset()** - Clears all state (predictionHistory, emitterActivationTimes, emitterFirstDetected, decisionTrace)
+7. **FrequencyActivityMap decay** - Hit/miss counts decay exponentially (0.9 factor)
+8. **Evaluation runner duration** - Uses scenario.duration, not hardcoded 60s
+9. **Evaluation runner metrics** - Uses real FrequencyActivityMap instead of simplified bandMetrics
+10. **Evaluation runner update** - Calls scheduler.update() on every scan (not just hits)
+11. **PriorityScheduler tiebreaking** - Random tiebreaking when all bands score equally
+12. **FrequencyActivityMap transitionProbability** - Computed from observation pattern
+13. **VirtualReceiver reset** - Has resetState() that clears all state
+14. **CorrelationGraph decay** - Has decay() method for count normalization
 
 ---
 

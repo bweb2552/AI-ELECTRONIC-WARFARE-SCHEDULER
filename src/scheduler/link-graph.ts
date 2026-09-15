@@ -33,6 +33,8 @@ export class TransitionGraph {
   private decayFactor = 0.995;
   private minEdgeWeight = 0.02;
   private maxEdgesPerNode = 10;
+  private lastDecayTime = 0;
+  private decayInterval = 5.0; // Apply decay every 5 simulation seconds
 
   constructor(_bands: FrequencyBand[]) {}
 
@@ -48,7 +50,6 @@ export class TransitionGraph {
     if (existing) {
       existing.count++;
       existing.lastTransition = time;
-      // Additive weight growth — no inline decay here
       existing.weight = Math.min(1.0, existing.weight + (hit ? 0.2 : 0.05));
     } else {
       this.edges.set(key, {
@@ -62,7 +63,11 @@ export class TransitionGraph {
     }
 
     this.pruneEdges();
-    this.applyDecay();
+    // Apply decay periodically, not on every transition
+    if (time - this.lastDecayTime >= this.decayInterval) {
+      this.applyDecay();
+      this.lastDecayTime = time;
+    }
   }
 
   private applyDecay(): void {
@@ -374,6 +379,16 @@ export class CorrelationGraph {
       }
     }
     return matrix;
+  }
+
+  decay(decayRate: number = 0.95): void {
+    for (const [key, data] of this.coOccurrence) {
+      data.count = data.count * decayRate;
+      // Prune very weak correlations
+      if (data.count < 0.1) {
+        this.coOccurrence.delete(key);
+      }
+    }
   }
 
   reset(): void {

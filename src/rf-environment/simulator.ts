@@ -55,30 +55,38 @@ export class Emitter {
     
     switch (this.type) {
       case 'static':
-        // Static emitters with full duty cycle are always active
         if (this.dutyCycle >= 1.0) return true;
-        return this.rng() < this.dutyCycle;
+        // Use deterministic duty cycle based on phase offset
+        const staticCycle = 1.0; // 1-second cycle
+        const staticPhase = ((time - this.startTime) + this.phase) % staticCycle;
+        return staticPhase < this.dutyCycle * staticCycle;
       case 'periodic':
         if (!this.period) return false;
         const cyclePos = (time - this.startTime) % this.period;
         return cyclePos < this.period * this.dutyCycle;
       case 'frequency-agile':
         if (this.dutyCycle >= 1.0) return true;
-        return this.rng() < this.dutyCycle;
+        // Use deterministic duty cycle with phase offset
+        const agileCycle = 0.5; // 0.5-second cycle
+        const agilePhase = ((time - this.startTime) + this.phase) % agileCycle;
+        return agilePhase < this.dutyCycle * agileCycle;
       case 'burst':
-        // Burst uses time-based windowing for more predictable behavior
         if (this.dutyCycle >= 1.0) return true;
-        // Use a pseudo-periodic burst pattern: active for short windows
-        const burstPeriod = 2.0; // seconds between burst opportunities
+        const burstPeriod = 2.0;
         const burstWindow = burstPeriod * this.dutyCycle;
         const burstPhase = (time - this.startTime + this.phase) % burstPeriod;
         return burstPhase < burstWindow;
       case 'correlated':
         if (this.dutyCycle >= 1.0) return true;
-        return this.rng() < this.dutyCycle;
+        // Use deterministic duty cycle correlated by shared timing
+        const corrCycle = 1.0;
+        const corrPhase = ((time - this.startTime) + this.phase) % corrCycle;
+        return corrPhase < this.dutyCycle * corrCycle;
       case 'adaptive':
         if (this.dutyCycle >= 1.0) return true;
-        return this.rng() < this.dutyCycle;
+        const adaptCycle = 0.8;
+        const adaptPhase = ((time - this.startTime) + this.phase) % adaptCycle;
+        return adaptPhase < this.dutyCycle * adaptCycle;
       default:
         return false;
     }
@@ -302,7 +310,7 @@ export class RFEnvironmentSimulator {
         const emitterPower = emitter.getPowerAt(this.currentTime);
         const emitterSNR = emitterPower - noise;
         
-        if (emitterSNR >= threshold - noise) {
+        if (emitterPower >= threshold) {
           detected = true;
           signalPower = emitterPower;
           snr = emitterSNR;
@@ -311,7 +319,7 @@ export class RFEnvironmentSimulator {
             estimatedCenterFreq: emitterFreq + (this.noiseModel.rng() - 0.5) * bw * 0.1,
             estimatedBandwidth: emitterBw * (0.8 + this.noiseModel.rng() * 0.4),
             estimatedPower: emitterPower + (this.noiseModel.rng() - 0.5) * 2,
-            confidence: Math.min(1, Math.max(0, (emitterSNR - (threshold - noise)) / 20)),
+            confidence: Math.min(1, Math.max(0, (emitterPower - threshold) / 20)),
           };
           break;
         }
@@ -373,6 +381,8 @@ export class RFEnvironmentSimulator {
       emitter.currentFrequency = emitter.baseFrequency;
       emitter.hopIndex = 0;
       emitter.lastHopTime = 0;
+      // Reset RNG to original seed state for reproducibility
+      emitter.rng = seedrandom(`${emitter.id}-${this.seed}`);
     }
   }
 }
