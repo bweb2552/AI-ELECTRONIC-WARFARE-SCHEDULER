@@ -481,6 +481,10 @@ Leave the project in a state where another coding session can immediately unders
 * **Firebase Optional Auth** - App works without Firebase config (simulation accessible without login)
 * **Fixed production blank page** - Removed `@remix-run/router` from Vite external config
 * **Fixed ProtectedRoute** - Allows dashboard access when Firebase is not configured
+* **Fixed broken world map polygons** - Replaced completely wrong continent coordinates (North America included Asia, Africa extended to Oceania) with accurate simplified Natural Earth outlines for 7 continents + 6 sub-regions + 15 country boundaries
+* **Improved map rendering** - Stronger land fill (#1a2d42 vs #0f2035), brighter ocean contrast, more visible country borders (rgba(50,110,160,0.6)), improved graticule visibility
+* **Global RF Map Redesign** - Professional dark basemap with Mercator projection, embedded Natural Earth land boundaries, country boundaries, graticule lines, hover tooltips, animated transition arcs, proper legend and statistics
+* **Leaflet Map Integration** - Replaced broken canvas-based polygon rendering with Leaflet tile map (CartoDB Dark Matter basemap). No npm dependency needed - loaded via CDN in index.html. Three map styles: Dark, Satellite, Tactical.
 
 ### Currently Working On
 * No task currently in progress
