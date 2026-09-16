@@ -30,6 +30,7 @@ export function useAudio() {
   });
 
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Initialize AudioContext on first user interaction
   const initAudioContext = useCallback(() => {
@@ -118,8 +119,8 @@ export function useAudio() {
   // Toggle sound on/off
   const toggleSound = useCallback(() => {
     audioRef.current.enabled = !audioRef.current.enabled;
+    setSoundEnabled(audioRef.current.enabled);
     console.log('[Audio] Sound', audioRef.current.enabled ? 'enabled' : 'disabled');
-    return audioRef.current.enabled;
   }, []);
 
   // Test beep
@@ -134,7 +135,7 @@ export function useAudio() {
   const beepWarning = useCallback(() => beep('warning'), [beep]);
 
   // Getters
-  const isEnabled = audioRef.current.enabled;
+  const isEnabled = soundEnabled;
   const hasContext = !!audioRef.current.context;
   const contextState = audioRef.current.context?.state ?? 'none';
 
@@ -157,6 +158,7 @@ export function useAudio() {
     // Config
     setEnabled: useCallback((enabled: boolean) => {
       audioRef.current.enabled = enabled;
+      setSoundEnabled(enabled);
     }, []),
   };
 }

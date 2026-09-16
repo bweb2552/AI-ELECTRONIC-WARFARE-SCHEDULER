@@ -2,13 +2,10 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { isFirebaseConfigured } from '../firebase/config';
 
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(style);
+// Inject spin keyframe once at module load
+const styleEl = document.createElement('style');
+styleEl.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
+document.head.appendChild(styleEl);
 
 export function ProtectedRoute() {
   const { user, loading } = useAuth();

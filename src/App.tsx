@@ -397,22 +397,23 @@ function Dashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
-      <header style={{ 
+      <header className="header-glow" style={{ 
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-        padding: '12px 24px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-primary)',
-        position: 'relative', zIndex: 10
+        padding: '12px 24px', background: 'linear-gradient(180deg, rgba(12,18,24,0.95), rgba(6,10,16,0.98))', borderBottom: '1px solid var(--border-primary)',
+        position: 'relative', zIndex: 10, backdropFilter: 'blur(12px)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ 
-            width: 32, height: 32, borderRadius: '8px', 
-            background: 'linear-gradient(135deg, var(--accent-cyan), #0099cc)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: 34, height: 34, borderRadius: '8px', 
+            background: 'linear-gradient(135deg, var(--accent-cyan), #0088bb)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(0, 212, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.15)'
           }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--bg-primary)' }}>EW</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 13, color: 'var(--bg-primary)', letterSpacing: '0.05em' }}>EW</span>
           </div>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.05em' }}>SMART-SCAN EW</h1>
-            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Adaptive Receiver Scheduler</p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.1em', textShadow: '0 0 16px rgba(0,212,255,0.25)' }}>SMART-SCAN EW</h1>
+            <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Adaptive Receiver Scheduler</p>
           </div>
         </div>
 
@@ -453,9 +454,9 @@ function Dashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>Speed</span>
-            <input type="range" min="0.5" max="10" step="0.5" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} style={{ width: 80 }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-cyan)', minWidth: 32 }}>{speed.toFixed(1)}x</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>SPEED</span>
+            <input type="range" min="0.5" max="10" step="0.5" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} style={{ width: 80, accentColor: 'var(--accent-cyan)' }} />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--accent-cyan)', minWidth: 32, fontWeight: 700 }}>{speed.toFixed(1)}x</span>
           </div>
 
           <button onClick={toggleRunning} className={`btn ${running ? 'btn-danger' : 'btn-primary'}`} style={{ minWidth: 100 }}>
@@ -463,31 +464,35 @@ function Dashboard() {
           </button>
           <button onClick={resetSim} className="btn btn-ghost" style={{ minWidth: 80 }} disabled={!running && simulationStatus === 'idle'}>↻ RESET</button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '16px', paddingLeft: '16px', borderLeft: '1px solid var(--border-primary)' }}>
+          <div className="separator" style={{ marginLeft: '12px' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button 
               onClick={audio.testBeep} 
               className="btn btn-ghost" 
-              style={{ padding: '6px 12px', fontSize: 11 }}
+              style={{ padding: '6px 12px', fontSize: 10, letterSpacing: '0.05em' }}
               disabled={!audio.hasContext}
               title="Test audio beep"
             >
-              🔊 TEST
+              TEST
             </button>
             <button 
               onClick={audio.toggleSound} 
               className={`btn ${audio.isEnabled ? 'btn-primary' : 'btn-ghost'}`}
-              style={{ padding: '6px 12px', fontSize: 11 }}
+              style={{ padding: '6px 12px', fontSize: 10, letterSpacing: '0.05em' }}
               title={audio.isEnabled ? 'Disable sound' : 'Enable sound'}
             >
-              {audio.isEnabled ? '🔊 ON' : '🔇 OFF'}
+              {audio.isEnabled ? 'SOUND ON' : 'SOUND OFF'}
             </button>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px', paddingLeft: '16px', borderLeft: '1px solid var(--border-primary)' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>
+          <div className="separator" style={{ marginLeft: '8px' }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.03em' }}>
               {user?.email || user?.displayName || 'User'}
             </span>
-            <button onClick={handleLogout} className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 11 }}>
+            <button onClick={handleLogout} className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 10, letterSpacing: '0.05em' }}>
               LOGOUT
             </button>
           </div>
@@ -496,80 +501,80 @@ function Dashboard() {
 
       <ErrorBoundary panelName="Dashboard Main">
       <main style={{ flex: 1, display: 'flex', overflow: 'hidden', padding: '16px', gap: '16px' }}>
-        <div style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'auto' }}>
-          <div className="glass-panel" style={{ padding: '16px' }}>
+        <div style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', gap: '14px', overflow: 'auto' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '0ms' }}>
             <div className="panel-header">
               <span className="panel-title">SIMULATION STATUS</span>
               <span className={`badge ${simulationStatus === 'running' ? 'badge-green' : simulationStatus === 'paused' ? 'badge-amber' : 'badge-cyan'}`}>
                 {simulationStatus.toUpperCase()}
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-              <div><span className="metric-label">Scenario:</span> {scenario?.name || 'None'}</div>
-              <div><span className="metric-label">Scheduler:</span> {schedulerType.toUpperCase()}</div>
-              <div><span className="metric-label">Sim Time:</span> {currentTime.toFixed(2)}s</div>
-              <div><span className="metric-label">Speed:</span> {speed.toFixed(1)}x</div>
-              <div><span className="metric-label">Scans:</span> {metrics.totalScans}</div>
-              <div><span className="metric-label">Hits:</span> {metrics.totalHits}</div>
-              <div><span className="metric-label">Misses:</span> {metrics.totalMisses}</div>
-              <div><span className="metric-label">Detection Rate:</span> {(metrics.pd * 100).toFixed(1)}%</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px', fontFamily: 'var(--font-mono)', fontSize: 10 }}>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Scenario</span><div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{scenario?.name || 'None'}</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Scheduler</span><div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{schedulerType.toUpperCase()}</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Sim Time</span><div style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{currentTime.toFixed(2)}s</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Speed</span><div style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{speed.toFixed(1)}x</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Scans</span><div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{metrics.totalScans}</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Hits</span><div style={{ color: 'var(--accent-green)', fontWeight: 500 }}>{metrics.totalHits}</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Misses</span><div style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{metrics.totalMisses}</div></div>
+              <div><span className="metric-label" style={{ marginTop: 0 }}>Detection Rate</span><div style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>{(metrics.pd * 100).toFixed(1)}%</div></div>
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '50ms' }}>
             <div className="panel-header">
               <span className="panel-title">RECEIVER STATUS</span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
               <div>
-                <div className="metric-label">CURRENT FREQUENCY</div>
-                <div className="metric-value" style={{ fontSize: 24 }}>{receiverState ? (receiverState.currentFrequency/1e6).toFixed(1) : 0} MHz</div>
+                <div className="metric-label" style={{ marginTop: 0 }}>CURRENT FREQUENCY</div>
+                <div className="metric-value" style={{ fontSize: 26, textShadow: '0 0 16px rgba(0,212,255,0.3)' }}>{receiverState ? (receiverState.currentFrequency/1e6).toFixed(1) : 0} <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>MHz</span></div>
               </div>
               <div>
-                <div className="metric-label">BAND INDEX</div>
-                <div className="metric-value" style={{ fontSize: 24 }}>{receiverState?.currentBand || 0} / {bandsRef.current.length - 1}</div>
+                <div className="metric-label" style={{ marginTop: 0 }}>BAND INDEX</div>
+                <div className="metric-value" style={{ fontSize: 22 }}>{receiverState?.currentBand || 0} <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>/ {bandsRef.current.length - 1}</span></div>
               </div>
               <div>
-                <div className="metric-label">SCAN STATE</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="metric-label" style={{ marginTop: 0 }}>SCAN STATE</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
                   <span className={`status-dot ${scanStateClass}`}></span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, textTransform: 'uppercase' }}>{scanState}</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: isScanning ? 'var(--accent-cyan)' : isTuning ? 'var(--accent-amber)' : 'var(--accent-green)' }}>{scanState}</span>
                 </div>
               </div>
               <div>
-                <div className="metric-label">NEXT SCAN IN</div>
-                <div className="metric-value" style={{ fontSize: 20, color: 'var(--accent-amber)' }}>
-                  {receiverState ? (tuningTimeRemaining + dwellTimeRemaining).toFixed(3) : 0}s
+                <div className="metric-label" style={{ marginTop: 0 }}>NEXT SCAN IN</div>
+                <div className="metric-value" style={{ fontSize: 18, color: 'var(--accent-amber)', textShadow: '0 0 12px rgba(255,184,0,0.2)' }}>
+                  {receiverState ? (tuningTimeRemaining + dwellTimeRemaining).toFixed(3) : 0}<span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>s</span>
                 </div>
               </div>
               <div>
-                <div className="metric-label">BANDWIDTH</div>
-                <div className="metric-value" style={{ fontSize: 16 }}>{receiverState ? (20).toFixed(0) : 0} MHz</div>
+                <div className="metric-label" style={{ marginTop: 0 }}>BANDWIDTH</div>
+                <div className="metric-value" style={{ fontSize: 16 }}>{receiverState ? (20).toFixed(0) : 0} <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>MHz</span></div>
               </div>
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '100ms' }}>
             <div className="panel-header">
               <span className="panel-title">NEXT BEST SCAN</span>
             </div>
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ marginTop: '10px' }}>
               {decision ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div className="metric-value" style={{ fontSize: 28 }}>{(decision.nextFrequency/1e6).toFixed(1)} MHz</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
+                    <div className="metric-value" style={{ fontSize: 30, textShadow: '0 0 20px rgba(0,212,255,0.3)' }}>{(decision.nextFrequency/1e6).toFixed(1)} <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>MHz</span></div>
                     <div className={`badge ${decision.exploration ? 'badge-amber' : 'badge-green'}`}>
                       {decision.exploration ? 'EXPLORE' : 'EXPLOIT'}
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                    <div>
-                      <div className="metric-label">PRIORITY</div>
-                      <div className="metric-value" style={{ fontSize: 20 }}>{(decision.priority * 100).toFixed(0)}%</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+                    <div className="metric-card" style={{ padding: '10px', textAlign: 'center' }}>
+                      <div className="metric-value" style={{ fontSize: 22, textShadow: '0 0 12px rgba(0,212,255,0.2)' }}>{(decision.priority * 100).toFixed(0)}%</div>
+                      <div className="metric-label" style={{ marginTop: 4 }}>PRIORITY</div>
                     </div>
-                    <div>
-                      <div className="metric-label">CONFIDENCE</div>
-                      <div className="metric-value" style={{ fontSize: 20 }}>{(decision.confidence * 100).toFixed(0)}%</div>
+                    <div className="metric-card" style={{ padding: '10px', textAlign: 'center' }}>
+                      <div className="metric-value" style={{ fontSize: 22, textShadow: '0 0 12px rgba(0,212,255,0.2)' }}>{(decision.confidence * 100).toFixed(0)}%</div>
+                      <div className="metric-label" style={{ marginTop: 4 }}>CONFIDENCE</div>
                     </div>
                   </div>
                   <div>
@@ -597,12 +602,12 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px', flex: 1, minHeight: 200 }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', flex: 1, minHeight: 200, animationDelay: '150ms' }}>
             <div className="panel-header">
               <span className="panel-title">DECISION TRACE</span>
-              <span className="panel-subtitle">Scheduler decision reasoning</span>
+              <span className="panel-subtitle">Scheduler reasoning</span>
             </div>
-            <div style={{ marginTop: '8px', maxHeight: 300, overflow: 'auto' }}>
+            <div style={{ marginTop: '10px', maxHeight: 300, overflow: 'auto' }}>
               {smartSchedulerRef.current ? (
                 smartSchedulerRef.current.getDecisionTrace().slice(0, 10).map((trace, i) => (
                   <div key={i} className="metric-card" style={{ marginBottom: '8px', padding: '12px' }}>
@@ -634,7 +639,7 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px', flex: 1, minHeight: 200 }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', flex: 1, minHeight: 200, animationDelay: '200ms' }}>
             <div className="panel-header">
               <span className="panel-title">EVENT TIMELINE</span>
             </div>
@@ -655,8 +660,8 @@ function Dashboard() {
           </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'auto' }}>
-          <div className="glass-panel" style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', overflow: 'auto' }}>
+          <div className="glass-panel animate-in" style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', animationDelay: '50ms' }}>
             <div className="panel-header">
               <span className="panel-title">LIVE SPECTRUM</span>
               <span className="panel-subtitle">Real-time RF activity across frequency</span>
@@ -671,7 +676,7 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column' }}>
+          <div className="glass-panel animate-in" style={{ flex: '0 0 340px', display: 'flex', flexDirection: 'column', animationDelay: '100ms' }}>
             <div className="panel-header">
               <span className="panel-title">360° ACTIVITY MATRIX</span>
               <span className="panel-subtitle">Frequency × Time spatio-temporal view</span>
@@ -686,14 +691,14 @@ function Dashboard() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div className="glass-panel animate-in" style={{ display: 'flex', flexDirection: 'column', animationDelay: '150ms' }}>
               <div className="panel-header">
                 <span className="panel-title">LINK GRAPH</span>
                 <button
                   className="btn btn-primary"
                   onClick={() => setFullGraphOpen(true)}
-                  style={{ padding: '4px 12px', fontSize: 10 }}
+                  style={{ padding: '4px 12px', fontSize: 9, letterSpacing: '0.06em' }}
                 >
                   OPEN FULL GRAPH
                 </button>
@@ -756,10 +761,10 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="glass-panel animate-in" style={{ display: 'flex', flexDirection: 'column', animationDelay: '200ms' }}>
               <div className="panel-header">
                 <span className="panel-title">BEHAVIORAL PATTERNS</span>
-                <span className="panel-subtitle">Discovered emitter fingerprints from observations</span>
+                <span className="panel-subtitle">Discovered emitter fingerprints</span>
               </div>
               <div style={{ flex: 1, padding: '16px', overflow: 'auto' }}>
                 {patterns.length > 0 ? (
@@ -824,13 +829,13 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '250ms' }}>
             <div className="panel-header">
               <span className="panel-title">GLOBAL RF INTELLIGENCE MAP</span>
               <button
                 className="btn btn-primary"
                 onClick={() => setGlobalMapOpen(true)}
-                style={{ padding: '4px 12px', fontSize: 10 }}
+                style={{ padding: '4px 12px', fontSize: 9, letterSpacing: '0.06em' }}
               >
                 OPEN GLOBAL RF MAP
               </button>
@@ -859,7 +864,7 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '300ms' }}>
             <div className="panel-header">
               <span className="panel-title">FREQUENCY ACTIVITY MAP</span>
               <span className="panel-subtitle">Live priority scoring across all bands</span>
@@ -887,7 +892,7 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="glass-panel" style={{ padding: '16px' }}>
+          <div className="glass-panel animate-in" style={{ padding: '16px', animationDelay: '350ms' }}>
             <div className="panel-header">
               <span className="panel-title">PERFORMANCE METRICS</span>
             </div>
@@ -992,10 +997,13 @@ function drawSpectrum(canvas: HTMLCanvasElement, bandMetrics: BandMetrics[], dec
   
   ctx.clearRect(0, 0, w, h);
   
-  ctx.fillStyle = '#05080c';
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrad.addColorStop(0, '#080c12');
+  bgGrad.addColorStop(1, '#050810');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, w, h);
   
-  ctx.strokeStyle = 'rgba(30, 45, 61, 0.3)';
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.04)';
   ctx.lineWidth = 1;
   for (let i = 0; i <= 10; i++) {
     const y = (i / 10) * h;
@@ -1030,14 +1038,23 @@ function drawSpectrum(canvas: HTMLCanvasElement, bandMetrics: BandMetrics[], dec
     ctx.fillStyle = gradient;
     ctx.fillRect(x + 1, y, barWidth - 2, barH);
     
+    if (barH > 4) {
+      ctx.shadowColor = m.activityScore > 0.7 ? '#ff4444' : m.activityScore > 0.5 ? '#00ff88' : m.activityScore > 0.3 ? '#ffb800' : 'transparent';
+      ctx.shadowBlur = m.activityScore > 0.3 ? 6 : 0;
+      ctx.fillRect(x + 1, y, barWidth - 2, 1);
+      ctx.shadowBlur = 0;
+    }
+    
     if (m.hitRate > 0) {
-      ctx.fillStyle = `rgba(0, 255, 136, ${m.hitRate * 0.5})`;
+      ctx.fillStyle = `rgba(0, 255, 136, ${m.hitRate * 0.6})`;
       ctx.fillRect(x + 1, h - m.hitRate * h * 0.8, barWidth - 2, 2);
     }
   });
   
   if (decision) {
     const x = (decision.nextBand / bands) * w;
+    ctx.shadowColor = '#00d4ff';
+    ctx.shadowBlur = 8;
     ctx.strokeStyle = '#00d4ff';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
@@ -1046,37 +1063,45 @@ function drawSpectrum(canvas: HTMLCanvasElement, bandMetrics: BandMetrics[], dec
     ctx.lineTo(x, h);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
     
     ctx.fillStyle = '#00d4ff';
-    ctx.font = '10px JetBrains Mono';
+    ctx.font = 'bold 10px JetBrains Mono';
     ctx.fillText('NEXT', x + 4, 14);
   }
   
   if (receiverState) {
     const x = (receiverState.currentBand / bands) * w;
+    ctx.shadowColor = '#ffb800';
+    ctx.shadowBlur = 6;
     ctx.strokeStyle = '#ffb800';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, h);
     ctx.stroke();
+    ctx.shadowBlur = 0;
     
     ctx.fillStyle = '#ffb800';
-    ctx.font = '10px JetBrains Mono';
+    ctx.font = 'bold 10px JetBrains Mono';
     ctx.fillText('CURRENT', x + 4, h - 4);
   }
   
   groundTruth.forEach(gt => {
     if (gt && gt.active) {
       const x = ((gt.frequency - 100e6) / 900e6) * w;
-      ctx.fillStyle = 'rgba(255, 68, 68, 0.6)';
+      ctx.shadowColor = '#ff4444';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = 'rgba(255, 68, 68, 0.7)';
       ctx.beginPath();
       ctx.arc(x, h * 0.5, 4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
     }
   });
   
-  ctx.strokeStyle = 'rgba(30, 45, 61, 0.3)';
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.08)';
   ctx.lineWidth = 1;
   ctx.strokeRect(0, 0, w, h);
 }
@@ -1090,7 +1115,10 @@ function drawMatrix(canvas: HTMLCanvasElement, scanHistory: Observation[], bands
   const numBands = bands.length;
   
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#05080c';
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrad.addColorStop(0, '#080c12');
+  bgGrad.addColorStop(1, '#050810');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, w, h);
   
   const timeWindow = 60;
@@ -1122,18 +1150,23 @@ function drawMatrix(canvas: HTMLCanvasElement, scanHistory: Observation[], bands
           const snr = obs.snr ?? 0;
           const intensity = Math.min(1, Math.max(0, (snr + 20) / 40));
           ctx.fillStyle = `rgba(0, 255, 136, ${0.3 + intensity * 0.7})`;
+          if (intensity > 0.6) {
+            ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 4;
+          }
         } else {
-          ctx.fillStyle = 'rgba(90, 111, 138, 0.15)';
+          ctx.fillStyle = 'rgba(90, 111, 138, 0.12)';
         }
       } else {
-        ctx.fillStyle = 'rgba(30, 45, 61, 0.3)';
+        ctx.fillStyle = 'rgba(20, 30, 42, 0.5)';
       }
       
       ctx.fillRect(x, y, cellWidth, cellHeight);
+      ctx.shadowBlur = 0;
     }
     
-    ctx.fillStyle = 'rgba(154, 176, 200, 0.4)';
-    ctx.font = '10px JetBrains Mono';
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.5)';
+    ctx.font = 'bold 10px JetBrains Mono';
     ctx.textAlign = 'right';
     ctx.fillText(`${(bands[i]?.centerFrequency/1e6).toFixed(0)} MHz`, w - 4, y + cellHeight * 0.7);
   }
@@ -1141,6 +1174,8 @@ function drawMatrix(canvas: HTMLCanvasElement, scanHistory: Observation[], bands
   const currentTimeBin = Math.floor(currentTime);
   if (currentTimeBin >= 0 && currentTimeBin < timeWindow) {
     const x = currentTimeBin * cellWidth;
+    ctx.shadowColor = '#00d4ff';
+    ctx.shadowBlur = 6;
     ctx.strokeStyle = '#00d4ff';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
@@ -1149,16 +1184,18 @@ function drawMatrix(canvas: HTMLCanvasElement, scanHistory: Observation[], bands
     ctx.lineTo(x, h);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
   }
   
-  ctx.fillStyle = 'rgba(0, 212, 255, 0.8)';
-  ctx.font = '10px JetBrains Mono';
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(0, 212, 255, 0.6)';
+  ctx.font = 'bold 10px JetBrains Mono';
   ctx.textAlign = 'left';
   ctx.fillText('TIME (s)', 8, 14);
   ctx.textAlign = 'right';
   ctx.fillText(`${timeWindow}s`, w - 8, 14);
   
-  ctx.strokeStyle = 'rgba(30, 45, 61, 0.3)';
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.06)';
   ctx.strokeRect(0, 0, w, h);
 }
 
