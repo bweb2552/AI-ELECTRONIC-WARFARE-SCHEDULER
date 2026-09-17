@@ -46,19 +46,31 @@ const BEHAVIOR_COLORS: Record<string, string> = {
   adaptive: '#06b6d4',
 };
 
-// Dark military-style tile layers
+// Keyless public tile layers — no API key required, no VITE_* env vars needed.
+// Dark theme is achieved via a CSS filter on the Leaflet tile pane (see .rf-dark-tiles
+// in the component <style> block), NOT via a separate dark-tile provider.
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const TILE_LAYERS = {
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     name: 'Dark',
+    attribution: OSM_ATTRIBUTION,
+    subdomains: 'abc',
+    darkFilter: true,
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     name: 'Satellite',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
+    subdomains: '',
+    darkFilter: false,
   },
   streets: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-    name: 'Tactical',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    name: 'Streets',
+    attribution: OSM_ATTRIBUTION,
+    subdomains: 'abc',
+    darkFilter: false,
   },
 };
 
@@ -79,6 +91,7 @@ export function GlobalRFMapView({
 }: GlobalRFMapViewProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const arcsLayerRef = useRef<L.LayerGroup | null>(null);
   const receiverLayerRef = useRef<L.LayerGroup | null>(null);
@@ -88,9 +101,9 @@ export function GlobalRFMapView({
   const [showReceivers, setShowReceivers] = useState(true);
   const [showEmitters, setShowEmitters] = useState(true);
   const [showArcs, setShowArcs] = useState(true);
-  const [showCountries, setShowCountries] = useState(true);
   const [minTransitionCount, setMinTransitionCount] = useState(3);
   const [mapStyle, setMapStyle] = useState<keyof typeof TILE_LAYERS>('dark');
+  const [tileError, setTileError] = useState(false);
 
   const emitterActivity = useMemo(() => {
     const activityMap = new Map<string, EmitterActivity>();
@@ -163,7 +176,7 @@ export function GlobalRFMapView({
     return { region, activity, patterns: regionPatterns };
   }, [emitterActivity, patterns, scenarioEmitters, bands]);
 
-  // Initialize Leaflet map
+  // Initialize Leaflet map (single tile layer, attribution always visible)
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
     const map = L.map(mapRef.current, {
@@ -172,16 +185,24 @@ export function GlobalRFMapView({
       minZoom: 2,
       maxZoom: 12,
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
       worldCopyJump: true,
+      maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 0.8,
     });
 
-    // Add dark CartoDB tiles as default
-    L.tileLayer(TILE_LAYERS.dark.url, {
-      subdomains: 'abcd',
+    // Add keyless OpenStreetMap tiles as default (dark-filtered via CSS)
+    const tiles = L.tileLayer(TILE_LAYERS.dark.url, {
+      subdomains: TILE_LAYERS.dark.subdomains,
       maxZoom: 19,
-    }).addTo(map);
+      attribution: TILE_LAYERS.dark.attribution,
+    });
+    (tiles as unknown as { on: (ev: string, fn: () => void) => unknown }).on('tileerror', () => setTileError(true));
+    tiles.addTo(map as unknown as never);
+    tileLayerRef.current = tiles;
+    // Dark theme is a CSS class on the container (not a tile provider). Toggle
+    // imperatively so React re-renders never clobber Leaflet's own container classes.
+    mapRef.current?.classList.toggle('rf-dark-tiles', TILE_LAYERS.dark.darkFilter);
 
     mapInstanceRef.current = map;
     markersLayerRef.current = L.layerGroup().addTo(map);
@@ -238,12 +259,25 @@ export function GlobalRFMapView({
     layer.clearLayers();
     if (!showEmitters) return;
 
+    // Offset co-located emitters on a small circle so each marker stays clickable
+    const regionCounts = new Map<string, number>();
+    for (const emitter of scenarioEmitters) {
+      if (emitter.region) regionCounts.set(emitter.region, (regionCounts.get(emitter.region) ?? 0) + 1);
+    }
+    const regionSeen = new Map<string, number>();
     for (const emitter of scenarioEmitters) {
       const region = GEO_REGIONS.find(r => r.id === emitter.region);
       if (!region) continue;
       const color = BEHAVIOR_COLORS[emitter.type] || '#666';
       const activity = emitter.region ? emitterActivity.get(emitter.region) : undefined;
       const hasActivity = activity && activity.detected;
+      const total = regionCounts.get(region.id) ?? 1;
+      const idx = regionSeen.get(region.id) ?? 0;
+      regionSeen.set(region.id, idx + 1);
+      const angle = total > 1 ? (idx / total) * Math.PI * 2 : 0;
+      const offset = total > 1 ? 2.2 : 0;
+      const lat = region.lat + Math.sin(angle) * offset;
+      const lon = region.lon + Math.cos(angle) * offset;
 
       const icon = L.divIcon({
         className: '',
@@ -257,7 +291,7 @@ export function GlobalRFMapView({
         iconAnchor: [5, 5],
       });
 
-      L.marker([region.lat, region.lon], { icon })
+      L.marker([lat, lon], { icon })
         .bindTooltip(`${emitter.name}\n${emitter.type} · ${(emitter.frequency / 1e6).toFixed(0)} MHz\nSimulated position`, {
           direction: 'top',
           offset: [0, -8],
@@ -294,7 +328,8 @@ export function GlobalRFMapView({
             <div style="
               width: ${markerSize}px; height: ${markerSize}px; border-radius: 50%;
               background: ${hasActivity ? `rgba(0,212,255,${0.4 + intensity * 0.6})` : 'rgba(40,60,80,0.5)'};
-              border: ${isSelected ? '2px solid #00d4ff' : '1.5px solid rgba(0,212,255,0.4)'};
+              border: ${isSelected ? '3px solid #ffffff' : '1.5px solid rgba(0,212,255,0.4)'};
+              ${isSelected ? 'outline: 2px solid #00d4ff; box-shadow: 0 0 16px rgba(0,212,255,0.9);' : ''}
               display: flex; align-items: center; justify-content: center;
               font-family: 'JetBrains Mono', monospace;
               font-size: 7px; font-weight: 700; color: ${isSelected ? '#ffffff' : 'rgba(180,200,220,0.8)'};
@@ -331,6 +366,7 @@ export function GlobalRFMapView({
         })
         .addTo(layer);
       (marker as any)._regionId = region.id;
+      if (isSelected) (marker as unknown as { bringToFront?: () => void }).bringToFront?.();
     }
   }, [emitterActivity, selectedRegion, getMarkerInfo]);
 
@@ -379,20 +415,25 @@ export function GlobalRFMapView({
     }
   }, [showArcs, transitionArcs]);
 
-  // Handle map style changes
+  // Handle map style changes (swap the single tile layer, keep overlays intact)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    map.eachLayer(layer => {
-      if (layer instanceof L.TileLayer) {
-        map.removeLayer(layer);
-      }
-    });
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current as unknown as never);
+      tileLayerRef.current = null;
+    }
+    setTileError(false);
     const tileConfig = TILE_LAYERS[mapStyle];
-    L.tileLayer(tileConfig.url, {
-      subdomains: mapStyle === 'satellite' ? [] : 'abcd',
+    const tiles = L.tileLayer(tileConfig.url, {
+      subdomains: tileConfig.subdomains,
       maxZoom: 19,
-    }).addTo(map);
+      attribution: tileConfig.attribution,
+    });
+    (tiles as unknown as { on: (ev: string, fn: () => void) => unknown }).on('tileerror', () => setTileError(true));
+    tiles.addTo(map as unknown as never);
+    tileLayerRef.current = tiles;
+    mapRef.current?.classList.toggle('rf-dark-tiles', tileConfig.darkFilter);
   }, [mapStyle]);
 
   const fitToScreen = useCallback(() => {
@@ -419,6 +460,9 @@ export function GlobalRFMapView({
         }
         .leaflet-container { background: #080e1a !important; }
         .transition-arc { filter: drop-shadow(0 0 4px rgba(255,184,0,0.3)); }
+        /* Dark RF-analysis theme applied ONLY to the basemap tile pane.
+           Markers, arcs, popups and controls live in separate panes and are unaffected. */
+        .rf-dark-tiles .leaflet-tile-pane { filter: invert(0.92) hue-rotate(180deg) saturate(0.45) brightness(0.95) contrast(0.95); }
       `}</style>
 
       {/* Top status bar */}
@@ -478,7 +522,6 @@ export function GlobalRFMapView({
             <ToggleRow checked={showReceivers} onChange={setShowReceivers} label={`Receivers (${RECEIVER_POSITIONS.length})`} color="#00d4ff" />
             <ToggleRow checked={showEmitters} onChange={setShowEmitters} label={`Emitters (${scenarioEmitters.length})`} color="#00ff88" />
             <ToggleRow checked={showArcs} onChange={setShowArcs} label={`Transitions (${transitionArcs.length})`} color="#ffb800" />
-            <ToggleRow checked={showCountries} onChange={setShowCountries} label="Country Boundaries" color="rgba(120,150,180,0.5)" />
           </div>
 
           {/* Map style */}
@@ -545,17 +588,42 @@ export function GlobalRFMapView({
         {/* Map container */}
         <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-          {/* Disclaimer */}
+          {/* Disclaimer (top-center so Leaflet attribution stays visible bottom-right) */}
           <div style={{
-            position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(12, 20, 36, 0.85)', padding: '4px 12px', borderRadius: '3px',
             border: '1px solid rgba(0, 212, 255, 0.1)',
             fontSize: 9, color: 'rgba(120, 140, 160, 0.6)',
             fontFamily: '"JetBrains Mono", monospace',
-            pointerEvents: 'none', zIndex: 1000,
+            pointerEvents: 'none', zIndex: 500, whiteSpace: 'nowrap', maxWidth: '90%',
+            overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
-            Geographic positions are simulated and do not represent real emitter locations.
+            SIMULATED positions — do not represent real emitter locations.
           </div>
+          {tileError && (
+            <div style={{
+              position: 'absolute', top: 44, left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(60, 20, 20, 0.9)', padding: '6px 14px', borderRadius: '3px',
+              border: '1px solid rgba(255, 100, 100, 0.4)',
+              fontSize: 10, color: '#ff9999',
+              fontFamily: '"JetBrains Mono", monospace',
+              zIndex: 500, whiteSpace: 'nowrap',
+            }}>
+              Map tiles failed to load — check network connection. Intelligence overlays still active.
+            </div>
+          )}
+          {observations.length === 0 && !tileError && (
+            <div style={{
+              position: 'absolute', top: 44, left: '50%', transform: 'translateX(-50%)',
+              background: 'rgba(12, 20, 36, 0.9)', padding: '6px 14px', borderRadius: '3px',
+              border: '1px solid rgba(0, 212, 255, 0.2)',
+              fontSize: 10, color: 'rgba(0, 212, 255, 0.8)',
+              fontFamily: '"JetBrains Mono", monospace',
+              zIndex: 500, whiteSpace: 'nowrap',
+            }}>
+              No receiver observations yet — press RUN on the dashboard to collect evidence.
+            </div>
+          )}
         </main>
 
         {/* Right details panel */}

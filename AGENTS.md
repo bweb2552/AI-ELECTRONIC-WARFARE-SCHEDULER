@@ -220,6 +220,8 @@ Update this section whenever meaningful progress is made.
 
 # 5. CURRENTLY IN PROGRESS
 
+* [x] Global RF Map Leaflet hardening: attribution restored (index.html hide removed, attributionControl on), single tile-layer ref with clean swaps + tileerror fallback banner, dead showCountries toggle removed, co-located emitters offset for clickability, selected marker prominent (white ring + glow + bringToFront), empty-observation banner, disclaimer moved top-center, maxBounds set — pipeline untouched, tsc + build + eval pass
+* [x] CARTO fully removed (cartocdn gated tiles behind API key → "API KEY REQUIRED" watermark): Dark/Tactical styles now use keyless OSM standard tiles (dark theme via CSS-only `.rf-dark-tiles` filter on tile pane, toggled imperatively), Streets = plain OSM, Satellite = Esri (unchanged, keyless). Zero carto refs in src/dist. No VITE_CARTO_API_KEY ever existed or needed. Required OSM/Esri attribution kept visible
 * [~] No task currently in progress
 
 ---
